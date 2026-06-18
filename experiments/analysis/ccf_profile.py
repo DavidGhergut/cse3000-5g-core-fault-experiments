@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-experiments/david/ccf_profile.py
-─────────────────────────────────
+ccf_profile.py
+──────────────
 Full cross-correlation function (CCF) profile analysis + coherence.
 
 Unlike cross_correlation.py which keeps only the peak (max |r|, lag_at_max),
@@ -37,14 +37,14 @@ Outputs:
   <out>/ccf_delta_lag_heatmap.png   Δpeak_lag heatmap across pairs × fault categories
 
 Usage:
-    python3 experiments/david/ccf_profile.py \\
-        --data data/5GCore/final_dataset/boyan \\
-        --out  data/5GCore/correlations/boyan/ccf \\
+    python3 ccf_profile.py \\
+        --data final_dataset/boyan \\
+        --out  output/ccf/boyan \\
         --mode operational
 
-    python3 experiments/david/ccf_profile.py \\
-        --data /path/to/security-faults \\
-        --out  data/5GCore/correlations/security/ccf \\
+    python3 ccf_profile.py \\
+        --data final_dataset/security_faults \\
+        --out  output/ccf/security \\
         --mode security
 """
 
@@ -181,6 +181,53 @@ def load_jaeger_p99(fault_dir, phase, nf, t_start, n=N_BINS, bin_sec=BIN_SEC):
             result[i] = np.percentile(spans, 99)
     s = pd.Series(result).interpolate(method="linear", limit_direction="both", limit=3)
     return s.values
+
+
+def load_loki_volume(fault_dir, phase, nf, t_start, n=N_BINS, bin_sec=BIN_SEC):
+    """Count all log lines per bin for a given NF."""
+    path = fault_dir / "loki" / phase / "all.csv"
+    result = np.zeros(n)
+    if not path.exists() or path.stat().st_size == 0:
+        return result
+    df = pd.read_csv(path)
+    if "app" not in df.columns or len(df) == 0:
+        return result
+    df = df[df["app"] == nf].copy()
+    if len(df) == 0:
+        return result
+    df["ts_sec"] = df["timestamp_ns"] / 1e9
+    for i in range(n):
+        t0 = t_start + i * bin_sec
+        t1 = t0 + bin_sec
+        result[i] = ((df["ts_sec"] >= t0) & (df["ts_sec"] < t1)).sum()
+    return result
+
+
+O5G_COUNTERS = (
+    [f"open5gs_amf_{x}.csv" for x in
+     ["reg_init_req", "reg_init_succ", "reg_init_fail", "auth_fail", "auth_reject",
+      "sessions", "registered_subscribers", "ran_ue_count", "gnb_count", "paging_req"]]
+    + [f"open5gs_smf_{x}.csv" for x in
+       ["pdu_session_req", "pdu_session_succ", "session_nbr", "n4_session_estab",
+        "n4_session_report", "n4_session_report_succ", "bearers_active", "qos_flow_nbr", "ues_active"]]
+    + [f"open5gs_upf_{x}.csv" for x in ["n4_session_estab", "qos_flows", "session_nbr"]]
+    + ["open5gs_pfcp_sessions_active.csv", "open5gs_pfcp_peers_active.csv", "open5gs_gtp_node_failed.csv"]
+)
+O5G_HOME = {"amf": "amf", "smf": "smf", "upf": "upf", "pfcp": "smf", "gtp": "upf"}
+
+
+def load_o5g_counter(fault_dir, phase, fname, t_start):
+    """Load one Open5GS application-KPI counter file (timestamp,value) and bin it (mean)."""
+    path = fault_dir / "prometheus" / phase / fname
+    if not path.exists() or path.stat().st_size == 0:
+        return None
+    df = pd.read_csv(path)
+    df["value"] = pd.to_numeric(df["value"], errors="coerce")
+    df = df.dropna(subset=["value"])
+    if len(df) == 0:
+        return None
+    g = df.groupby("timestamp")["value"].mean()
+    return bin_prom(g.index.values, g.values, t_start)
 
 
 def load_loki_errors(fault_dir, phase, nf, t_start, n=N_BINS, bin_sec=BIN_SEC):

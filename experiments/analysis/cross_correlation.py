@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-experiments/david/cross_correlation.py
+cross_correlation.py
 
 Compute pairwise cross-correlation between telemetry signals across modalities
 for each fault. Reports correlation strength and propagation lag.
@@ -19,8 +19,8 @@ Output:
 
 Usage:
     python3 cross_correlation.py \\
-        --data data/5GCore/03-fault-detection-trial2 \\
-        --out  data/5GCore/correlations
+        --data final_dataset/boyan \\
+        --out  correlations_o5g/boyan
 """
 
 import argparse
@@ -609,8 +609,8 @@ def analyze_fault(fault_dir):
                     "sig_a":         sig_a,
                     "sig_b":         sig_b,
                     "modality_pair": category,
-                    "correlation":   corr,       # Pearson CCF max (used for SQ3 lag analysis)
-                    "spearman_r":    rho,         # Spearman at lag=0 (used for Δ|r| classifier feature)
+                    "correlation":   corr,       # rank cross-correlation peak (used for SQ3 lag analysis)
+                    "spearman_r":    rho,         # Spearman at lag 0 (used for the Δ|r| classifier feature)
                     "lag_bins":      lag,
                     "lag_sec":       lag * BIN_SEC if lag is not None else np.nan,
                     "window":        window_name,

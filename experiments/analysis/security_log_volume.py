@@ -5,12 +5,13 @@ its three trials. The NRF SBI flood is a valid-request attack and produces ZERO 
 (the security-side log blindspot, mirror of the operational trace blindspot).
 
 Usage:  python3 security_log_volume.py [path/to/security_faults]
-        (defaults to data/5GCore/final_dataset/security_faults under the dataset release)
+        (defaults to the security_faults directory under the dataset)
 """
 import sys
 from pathlib import Path
+import _paths
 
-ROOT = Path(sys.argv[1] if len(sys.argv) > 1 else "data/5GCore/final_dataset/security_faults")
+ROOT = Path(sys.argv[1]) if len(sys.argv) > 1 else _paths.SECURITY
 ATTACKS = [
     "nas-registration-storm", "sbi-http2-flood-amf", "sbi-http2-flood-nrf",
     "sbi-http2-flood-scp", "sbi-http2-flood-smf", "authentication-exhaustion",

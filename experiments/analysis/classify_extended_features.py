@@ -19,15 +19,16 @@ signal (not per-NF). A column is kept only if it is non-NaN/non-constant in
 
 Compares LOOCV accuracy against the 21-feature Δmean baseline.
 
-Usage (same --data layout as classify_raw_signals_intershap.py):
-    python3 experiments/david/classify_extended_features.py \\
-        --data data/5GCore/final_dataset/boyan \\
-               data/5GCore/final_dataset/boyan-2 \\
-               data/5GCore/final_dataset/trial4 \\
-               data/5GCore/final_dataset/trial5 \\
-               data/5GCore/final_dataset/trial6/C-fault-detection \\
-               data/5GCore/final_dataset/trial7/C-fault-detection \\
-        --out  data/5GCore/classifier/extended_all6
+Usage (one --data argument per trial):
+    python3 classify_extended_features.py \\
+        --data final_dataset/boyan \\
+               final_dataset/boyan-2 \\
+               final_dataset/trial4 \\
+               final_dataset/trial5 \\
+               final_dataset/trial6/C-fault-detection \\
+               final_dataset/trial7/C-fault-detection \\
+               final_dataset/trial8/C-fault-detection \\
+        --out  output/classifier_extended
 """
 
 import argparse

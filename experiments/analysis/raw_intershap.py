@@ -28,6 +28,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import re
+import _paths
 
 from scipy.stats import spearmanr
 from sklearn.ensemble import RandomForestClassifier
@@ -47,12 +48,7 @@ PRE_BINS  = 60   # 600s pre-fault / 10s
 CORE_NFS  = ["amf", "smf", "nrf", "scp", "ausf", "udm", "udr", "pcf", "mongodb", "upf"]
 TRACE_NFS = ["amf", "smf", "nrf", "scp", "ausf", "udm", "udr", "pcf"]
 
-TRIAL_PATHS = [
-    Path("data/5GCore/final_dataset/boyan"),
-    Path("data/5GCore/final_dataset/boyan-2"),
-    Path("data/5GCore/final_dataset/trial4"),
-    Path("data/5GCore/final_dataset/trial5"),
-]
+TRIAL_PATHS = [_paths.trial_dir(t) for t in ["boyan", "boyan-2", "trial4", "trial5"]]
 
 FAULT_CATEGORIES = {
     "01-cpu-stress-amf":                       "infrastructure",
@@ -272,7 +268,7 @@ def extract_features(fault_dir):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--out", default="data/5GCore/classifier/intershap")
+    parser.add_argument("--out", default=str(_paths.OUTPUT / "intershap"))
     args = parser.parse_args()
     out_dir = Path(args.out)
     out_dir.mkdir(parents=True, exist_ok=True)

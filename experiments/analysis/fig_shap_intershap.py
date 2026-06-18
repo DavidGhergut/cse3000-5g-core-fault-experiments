@@ -6,6 +6,7 @@ opposite order, illustrating characterization (coupling discriminability) vs.
 classification (raw-feature interaction)."""
 import numpy as np, matplotlib
 matplotlib.use("Agg"); import matplotlib.pyplot as plt
+import _paths
 
 pairs = ["metrics-\nlogs", "metrics-\ntraces", "logs-\ntraces"]
 col   = ["#c0392b", "#e8833a", "#3b7cc4"]            # M-L, M-T, L-T
@@ -31,5 +32,6 @@ ax[1].set_ylabel(r"mean SHAP interaction ($\times10^{-3}$)", fontsize=9); ax[1].
 
 for a in ax: a.tick_params(axis="x", labelsize=8.5); a.grid(axis="y", alpha=0.25)
 plt.tight_layout()
-out = "/Users/david/Desktop/Research paper_david/figures/fig_shap_intershap.png"
+_paths.OUTPUT.mkdir(parents=True, exist_ok=True)
+out = _paths.OUTPUT / "fig_shap_intershap.png"
 fig.savefig(out, dpi=150, bbox_inches="tight"); print("wrote", out)

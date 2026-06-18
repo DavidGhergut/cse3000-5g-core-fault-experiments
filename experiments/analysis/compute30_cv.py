@@ -1,39 +1,67 @@
-"""tab:cv at the full 30 seeds (matches the paper's stated protocol): Delta|rho|, raw, combined,
-LOOCV + LOTO, mean +/- std. Matrices built once; foreground."""
-import sys, re
-sys.path.insert(0, "experiments/david")
-import numpy as np, pandas as pd
+"""tab:cv: Delta|rho|, raw, and combined features, LOOCV + leave-one-trial-out.
+
+Reports mean +/- std accuracy and macro-F1 over multiple seeds for the three
+feature views. The raw and per-trial feature matrices come from caches built by
+op_raw_ablation.py and build_feature_cache.py.
+"""
+
+import re
+
+import _paths  # noqa: F401  (anchors sys.path and dataset paths)
+import numpy as np
+import pandas as pd
 import classify_faults_rf as cf
 import classify_extended_features as ext
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import LeaveOneOut, LeaveOneGroupOut, cross_val_predict
 from sklearn.metrics import f1_score
 
-TRIALS = ["boyan", "boyan-2", "trial4", "trial5", "trial6", "trial7", "trial8"]
 SEEDS = 10
-def rf(s): return RandomForestClassifier(n_estimators=200, max_features="sqrt",
-                                         class_weight="balanced", random_state=s, n_jobs=-1)
-def report(name, X, y, g):
-    la, lf, ta, tf = [], [], [], []
-    for s in range(SEEDS):
-        p = cross_val_predict(rf(s), X, y, cv=LeaveOneOut()); la.append((p == y).mean()); lf.append(f1_score(y, p, average="macro"))
-        q = cross_val_predict(rf(s), X, y, cv=LeaveOneGroupOut(), groups=g); ta.append((q == y).mean()); tf.append(f1_score(y, q, average="macro"))
-    print(f"[{name}] {X.shape[1]}f  LOOCV {np.mean(la)*100:.1f}±{np.std(la)*100:.1f} F1 {np.mean(lf):.2f} "
-          f"| LOTO {np.mean(ta)*100:.1f}±{np.std(ta)*100:.1f} F1 {np.mean(tf):.2f}", flush=True)
+OPERATIONAL_CATS = ["infrastructure", "network", "pfcp", "pod_crash"]
 
-# delta (cross, 160f)
-Xd, yd, ids_d, _ = cf.build_feature_matrix(
-    [f"data/5GCore/correlations_o5g/{t}/correlations.csv" for t in TRIALS],
-    cats=["infrastructure", "network", "pfcp", "pod_crash"], relabel={"cascade": "pod_crash"})
-gd = np.array([re.search(r"\[([^\]]+)\]", s).group(1) for s in ids_d])
-report("delta", Xd, yd, gd)
-# raw
-d = np.load("/tmp/op_raw_ablation.npz", allow_pickle=True)
-Xr, yr, gr = d["X"], d["y"], d["g"]
-report("raw", Xr, yr, gr)
-# combined (align delta to raw order)
-df = pd.concat([pd.read_pickle(f"/tmp/featcache/{t}.pkl") for t in TRIALS], ignore_index=True)
-_, _, ids_r, _ = ext.build_matrix(df, ext.CATS_OPERATIONAL, ext.RELABEL)
-pos = {fid: i for i, fid in enumerate(ids_d)}
-report("combined", np.hstack([Xr, Xd[[pos[fid] for fid in ids_r]]]), yr, gr)
+
+def trial_of(fault_id):
+    """Extract the trial name from a fault id of the form 'fault [trial]'."""
+    return re.search(r"\[([^\]]+)\]", fault_id).group(1)
+
+
+def make_rf(seed):
+    return RandomForestClassifier(n_estimators=200, max_features="sqrt",
+                                  class_weight="balanced", random_state=seed, n_jobs=-1)
+
+
+def report(name, X, y, groups):
+    """Print mean +/- std accuracy and macro-F1 for LOOCV and LOTO over SEEDS seeds."""
+    loocv_acc, loocv_f1, loto_acc, loto_f1 = [], [], [], []
+    for seed in range(SEEDS):
+        pred_loocv = cross_val_predict(make_rf(seed), X, y, cv=LeaveOneOut())
+        loocv_acc.append((pred_loocv == y).mean())
+        loocv_f1.append(f1_score(y, pred_loocv, average="macro"))
+        pred_loto = cross_val_predict(make_rf(seed), X, y, cv=LeaveOneGroupOut(), groups=groups)
+        loto_acc.append((pred_loto == y).mean())
+        loto_f1.append(f1_score(y, pred_loto, average="macro"))
+    print(f"[{name}] {X.shape[1]}f  "
+          f"LOOCV {np.mean(loocv_acc) * 100:.1f}±{np.std(loocv_acc) * 100:.1f} F1 {np.mean(loocv_f1):.2f} "
+          f"| LOTO {np.mean(loto_acc) * 100:.1f}±{np.std(loto_acc) * 100:.1f} F1 {np.mean(loto_f1):.2f}",
+          flush=True)
+
+
+# Delta|rho| cross-modal coupling features.
+X_delta, y_delta, ids_delta, _ = cf.build_feature_matrix(
+    [str(_paths.corr_csv(t)) for t in _paths.TRIALS],
+    cats=OPERATIONAL_CATS, relabel={"cascade": "pod_crash"})
+groups_delta = np.array([trial_of(i) for i in ids_delta])
+report("delta", X_delta, y_delta, groups_delta)
+
+# Raw shape-stat features (cached by op_raw_ablation.py).
+cached = np.load("/tmp/op_raw_ablation.npz", allow_pickle=True)
+X_raw, y_raw, groups_raw = cached["X"], cached["y"], cached["g"]
+report("raw", X_raw, y_raw, groups_raw)
+
+# Combined: concatenate raw + delta, aligning the delta rows to the raw row order.
+features = pd.concat([pd.read_pickle(f"/tmp/featcache/{t}.pkl") for t in _paths.TRIALS], ignore_index=True)
+_, _, ids_raw, _ = ext.build_matrix(features, ext.CATS_OPERATIONAL, ext.RELABEL)
+delta_row = {fault_id: i for i, fault_id in enumerate(ids_delta)}
+X_combined = np.hstack([X_raw, X_delta[[delta_row[fault_id] for fault_id in ids_raw]]])
+report("combined", X_combined, y_raw, groups_raw)
 print("[done]", flush=True)

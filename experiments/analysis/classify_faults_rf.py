@@ -3,10 +3,10 @@
 classify_faults_rf.py  —  Random Forest fault classifier on Δ|r| features + SHAP.
 
 Usage:
-    python3 experiments/david/classify_faults_rf.py \
-        --corr data/5GCore/correlations/boyan/correlations.csv \
-               data/5GCore/correlations/david-3/correlations.csv \
-        --out  data/5GCore/classifier/
+    python3 classify_faults_rf.py \
+        --corr correlations_o5g/boyan/correlations.csv \
+               correlations_o5g/boyan-2/correlations.csv \
+        --out  output/classifier_delta
 
 Outputs:
     feature_matrix.csv          Δ|r| feature matrix (rows=faults, cols=signal pairs)

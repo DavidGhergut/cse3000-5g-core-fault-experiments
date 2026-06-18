@@ -6,6 +6,11 @@ kind/.kind-config.runtime.yaml
 __pycache__/
 *.pyc
 
+# Analysis: extracted dataset (from the release) and generated artifacts
+experiments/analysis/final_dataset
+experiments/analysis/correlations_o5g/
+experiments/analysis/output/
+
 # run logs
 run_all_*.log
 
