@@ -1,6 +1,6 @@
 # Multi-Modal Correlation of Observability Signals in a Cloud-Native 5G Core
 
-This repository accompanies a TU Delft bachelor research project (CSE3000) on **cross-modal
+This repository accompanies a TU Delft bachelor research project (CSE3000) 2025-2026 edition on **cross-modal
 correlation of observability signals** (metrics, logs, and distributed traces) for
 characterizing faults in a cloud-native Open5GS 5G Core.
 
